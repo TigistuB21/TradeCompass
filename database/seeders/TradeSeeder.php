@@ -17,7 +17,7 @@ class TradeSeeder extends Seeder
 {
     public function run(): void
     {
-        $faker = Faker::create();
+        $faker = fake();
         $traders = User::role('trader')->get();
 
         foreach ($traders as $trader) {

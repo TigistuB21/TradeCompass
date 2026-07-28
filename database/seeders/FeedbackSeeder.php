@@ -13,7 +13,7 @@ class FeedbackSeeder extends Seeder
 {
     public function run(): void
     {
-        $faker = Faker::create();
+        $faker = fake();
         $assignments = AnalystAssignment::with(['analyst', 'trader'])->get();
 
         foreach ($assignments as $assignment) {
