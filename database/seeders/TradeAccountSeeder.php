@@ -21,7 +21,7 @@ class TradeAccountSeeder extends Seeder
                     'account_name' => 'Main Live Account',
                 ],
                 [
-                    'account_type' => AccountType::LIVE,
+                    'account_type' => AccountType::REAL,
                     'broker' => 'IC Markets',
                     'initial_balance' => 10000,
                     'currency' => 'USD',
@@ -51,7 +51,7 @@ class TradeAccountSeeder extends Seeder
                     'account_name' => 'Small Flip',
                 ],
                 [
-                    'account_type' => AccountType::LIVE,
+                    'account_type' => AccountType::REAL,
                     'broker' => 'Oanda',
                     'initial_balance' => 500,
                     'currency' => 'USD',

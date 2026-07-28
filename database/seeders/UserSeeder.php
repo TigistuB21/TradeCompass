@@ -71,9 +71,8 @@ class UserSeeder extends Seeder
                     'bio' => $data['bio'],
                     // Analyst specific fields (assuming these exist on User or related profile)
                     // If they are on user table directly based on task description "Analyst Profiles"
-                    'analyst_specialization' => $data['specialization'], 
+                    'specialization' => $data['specialization'], 
                     'years_of_experience' => $data['years_of_experience'],
-                    'max_traders' => $data['max_traders'],
                     'verification_status' => 'verified',
                 ]
             );
@@ -88,7 +87,7 @@ class UserSeeder extends Seeder
                 'email' => 'john.trader@example.com',
                 'username' => 'j_scalps',
                 'style' => 'Scalper',
-                'experience' => 'Beginner',
+                'experience' => 'beginner',
                 'bio' => 'New to trading, trying to learn price action on M1/M5.',
             ],
             [
@@ -96,7 +95,7 @@ class UserSeeder extends Seeder
                 'email' => 'emma.trader@example.com',
                 'username' => 'emma_swings',
                 'style' => 'Swing',
-                'experience' => 'Intermediate',
+                'experience' => 'intermediate',
                 'bio' => 'Swing trader holding positions for days. Focus on H4/D1.',
             ],
             [
@@ -104,7 +103,7 @@ class UserSeeder extends Seeder
                 'email' => 'alex.trader@example.com',
                 'username' => 'alex_daytrade',
                 'style' => 'Day Trader',
-                'experience' => 'Advanced',
+                'experience' => 'advanced',
                 'bio' => 'Full-time day trader. Indices and Majors.',
             ],
             [
@@ -112,7 +111,7 @@ class UserSeeder extends Seeder
                 'email' => 'crypto.trader@example.com',
                 'username' => 'btc_king',
                 'style' => 'Swing',
-                'experience' => 'Intermediate',
+                'experience' => 'intermediate',
                 'bio' => 'Crypto enthusiast diversifying into FX.',
             ],
             [
@@ -120,7 +119,7 @@ class UserSeeder extends Seeder
                 'email' => 'lisa.trader@example.com',
                 'username' => 'lisa_levels',
                 'style' => 'Price Action',
-                'experience' => 'Advanced',
+                'experience' => 'advanced',
                 'bio' => 'Supply and Demand trader.',
             ],
              [
@@ -128,7 +127,7 @@ class UserSeeder extends Seeder
                 'email' => 'tom.trader@example.com',
                 'username' => 'tom_trends',
                 'style' => 'Trend Following',
-                'experience' => 'Beginner',
+                'experience' => 'beginner',
                 'bio' => 'Following the trend until it bends.',
             ],
         ];

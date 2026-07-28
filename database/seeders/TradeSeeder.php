@@ -28,9 +28,9 @@ class TradeSeeder extends Seeder
                 continue;
             }
 
-            // Generate 40-80 trades per trader
-            $tradeCount = rand(40, 80);
-            $startDate = Carbon::now()->subMonths(6);
+            // Generate 6-10 trades per trader for fast seeding
+            $tradeCount = rand(6, 10);
+            $startDate = Carbon::now()->subMonths(2);
 
             for ($i = 0; $i < $tradeCount; $i++) {
                 // Pick account and strategy
@@ -40,10 +40,10 @@ class TradeSeeder extends Seeder
                 // Trade details
                 $pair = $faker->randomElement(['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'XAUUSD', 'US30']);
                 $direction = $faker->randomElement([TradeDirection::BUY, TradeDirection::SELL]);
-                $session = $faker->randomElement([MarketSession::LONDON, MarketSession::NEW_YORK, MarketSession::ASIAN]);
+                $session = $faker->randomElement([MarketSession::LONDON, MarketSession::NEWYORK, MarketSession::ASIA]);
                 
                 // Timeline
-                $entryDate = (clone $startDate)->addDays(rand(1, 180))->addHours(rand(0, 23))->addMinutes(rand(0, 59));
+                $entryDate = (clone $startDate)->addDays(rand(1, 60))->addHours(rand(0, 23))->addMinutes(rand(0, 59));
                 $duration = rand(1, 48); // 1 to 48 hours
                 $exitDate = (clone $entryDate)->addHours($duration);
 
@@ -53,7 +53,7 @@ class TradeSeeder extends Seeder
                     TradeOutcome::WIN, 
                     TradeOutcome::LOSS, 
                     TradeOutcome::LOSS, 
-                    TradeOutcome::BREAK_EVEN
+                    TradeOutcome::BREAKEVEN
                 ]); // Weighted slightly towards active trading
 
                 $riskReward = $faker->randomFloat(2, 1, 4); // 1:1 to 1:4 normally
@@ -95,10 +95,6 @@ class TradeSeeder extends Seeder
                     'post_trade_emotion' => $outcome === TradeOutcome::WIN ? 'Satisfied' : 'Frustrated',
                     'followed_plan' => $faker->boolean(80),
                 ]);
-
-                // Attach Tags
-                $tags = ['Session Open', 'Retest', 'Impulse', 'Chop', 'News Event'];
-                $trade->attachTags([$faker->randomElement($tags)]);
             }
         }
 

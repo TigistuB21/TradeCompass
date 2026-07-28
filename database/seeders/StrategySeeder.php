@@ -61,7 +61,7 @@ class StrategySeeder extends Seeder
                 ],
                 [
                     'description' => 'Fading moves at extreme RSI levels.',
-                    'status' => StrategyStatus::RETIRED,
+                    'status' => StrategyStatus::ARCHIVED,
                     'tags' => ['reversal', 'rsi', 'risky'],
                     'rules' => [
                         'RSI > 70 or < 30',
