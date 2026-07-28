@@ -1,59 +1,246 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# TradeCompass
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+> Navigate Every Trade with Confidence.
 
-## About Laravel
+TradeCompass is an AI-powered trading journal and performance analytics platform designed to help traders record, analyze, and improve their trading performance through data-driven insights, AI coaching, and expert performance reviews.
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+Built with Laravel, TradeCompass transforms trading history into actionable insights by combining journaling, analytics, behavioral analysis, and personalized feedback.
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+---
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+## Features
 
-## Learning Laravel
+### Trading Journal
+- Record and organize every trade
+- Upload trade screenshots
+- Track emotions and trading psychology
+- Categorize trades with tags
+- Add personal notes
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework. You can also check out [Laravel Learn](https://laravel.com/learn), where you will be guided through building a modern Laravel application.
+### Performance Analytics
+- Interactive trading dashboard
+- Win/Loss analysis
+- Risk-to-Reward statistics
+- Trading session analysis
+- Currency pair performance
+- Equity and performance charts
+- Historical performance tracking
 
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+### AI Coaching
+- AI-generated trade feedback
+- Behavioral analysis
+- Personalized trading insights
+- Performance recommendations
+- Trading habit evaluation
 
-## Laravel Sponsors
+### Performance Analyst Marketplace
+- Connect traders with professional analysts
+- Request expert reviews
+- Receive personalized feedback
+- Analyst dashboards
+- Subscription management
 
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the [Laravel Partners program](https://partners.laravel.com).
+### Gamification
+- Achievement system
+- XP rewards
+- Trading milestones
+- Progress tracking
 
-### Premium Partners
+### Administration
+- User management
+- Analyst management
+- Subscription management
+- Payment management
+- Platform monitoring
 
-- **[Vehikl](https://vehikl.com)**
-- **[Tighten Co.](https://tighten.co)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Curotec](https://www.curotec.com/services/technologies/laravel)**
-- **[DevSquad](https://devsquad.com/hire-laravel-developers)**
-- **[Redberry](https://redberry.international/laravel-development)**
-- **[Active Logic](https://activelogic.com)**
+---
+
+## Technology Stack
+
+### Backend
+
+- Laravel 12
+- PHP 8.2+
+- Eloquent ORM
+- Laravel Queues
+- Laravel Scheduler
+
+### Frontend
+
+- Blade
+- Tailwind CSS 4
+- Alpine.js
+- Vite
+- Chart.js
+
+### Database
+
+- SQLite
+- MySQL
+- PostgreSQL (supported)
+
+### Integrations
+
+- Gemini AI
+- Groq AI
+- Stripe
+- Chapa Payment Gateway
+
+---
+
+## Project Structure
+
+```
+app/
+bootstrap/
+config/
+database/
+docs/
+public/
+resources/
+routes/
+storage/
+tests/
+```
+
+---
+
+## Installation
+
+Clone the repository
+
+```bash
+git clone https://github.com/YourUsername/TradeCompass.git
+cd TradeCompass
+```
+
+Install PHP dependencies
+
+```bash
+composer install
+```
+
+Install frontend dependencies
+
+```bash
+npm install
+```
+
+Copy the environment file
+
+```bash
+cp .env.example .env
+```
+
+Generate the application key
+
+```bash
+php artisan key:generate
+```
+
+Run database migrations
+
+```bash
+php artisan migrate
+```
+
+Seed the database (if available)
+
+```bash
+php artisan db:seed
+```
+
+Start the development server
+
+```bash
+composer run dev
+```
+
+---
+
+## Documentation
+
+Additional documentation is available in the repository.
+
+- PROJECT_ANALYSIS.md
+- DEPENDENCIES.md
+- SETUP_GUIDE.md
+- QUICK_START.md
+- CONTRIBUTING.md
+- PROJECT_HEALTH_REPORT.md
+- IMPLEMENTATION_ROADMAP.md
+
+---
+
+## Architecture
+
+TradeCompass follows a layered Laravel architecture based on the MVC pattern with dedicated service classes responsible for business logic.
+
+Core modules include:
+
+- Authentication
+- Trade Journal
+- Analytics
+- AI Coaching
+- Performance Analysts
+- Messaging
+- Payments
+- Achievements
+- Administration
+
+---
+
+## Screenshots
+
+Screenshots will be added soon.
+
+---
+
+## Roadmap
+
+- Enhanced AI coaching
+- Mobile application
+- Broker integrations
+- REST API
+- Portfolio analytics
+- Trading calendar
+- Strategy performance tracking
+- Advanced reporting
+- Docker deployment
+- Cloud deployment
+
+---
 
 ## Contributing
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+Contributions are welcome.
 
-## Code of Conduct
+Please read:
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+```
+CONTRIBUTING.md
+```
 
-## Security Vulnerabilities
+before opening issues or submitting pull requests.
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+---
 
 ## License
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+This project is licensed under the MIT License.
+
+---
+
+## Author
+
+Developed by **Tigistu Begashaw**
+
+Computer Science Graduate
+
+GitHub: https://github.com/YourUsername
+
+---
+
+## Vision
+
+TradeCompass aims to become a comprehensive trading companion that empowers traders to make better decisions through data, analytics, expert guidance, and artificial intelligence.
