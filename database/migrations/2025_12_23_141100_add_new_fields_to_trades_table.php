@@ -13,6 +13,13 @@ return new class extends Migration
             $table->string('trade_type')->nullable(); // Scalp, Day, Swing, etc.
             $table->decimal('risk_percentage', 5, 2)->nullable();
             
+            // Detailed Prices & Sizing
+            $table->decimal('entry_price', 15, 5)->nullable();
+            $table->decimal('exit_price', 15, 5)->nullable();
+            $table->decimal('stop_loss', 15, 5)->nullable();
+            $table->decimal('take_profit', 15, 5)->nullable();
+            $table->decimal('lot_size', 8, 2)->nullable();
+
             // Psychology
             $table->string('pre_trade_emotion')->nullable();
             $table->string('post_trade_emotion')->nullable();
@@ -33,6 +40,11 @@ return new class extends Migration
                 'strategy_id',
                 'trade_type',
                 'risk_percentage',
+                'entry_price',
+                'exit_price',
+                'stop_loss',
+                'take_profit',
+                'lot_size',
                 'pre_trade_emotion',
                 'post_trade_emotion',
                 'followed_plan',

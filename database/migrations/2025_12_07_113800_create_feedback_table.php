@@ -13,6 +13,7 @@ return new class extends Migration
             $table->foreignId('trader_id')->constrained('users')->onDelete('cascade');
             $table->foreignId('analyst_id')->constrained('users')->onDelete('cascade');
             $table->foreignId('trade_id')->nullable()->constrained('trades')->onDelete('cascade');
+            $table->string('type')->default('general');
             $table->text('content');
             $table->json('ai_suggestions')->nullable();
             $table->enum('status', ['draft', 'submitted', 'locked'])->default('draft');

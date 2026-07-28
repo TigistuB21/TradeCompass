@@ -12,7 +12,9 @@ return new class extends Migration
             $table->id();
             $table->foreignId('analyst_id')->constrained('users')->onDelete('cascade');
             $table->foreignId('trader_id')->constrained('users')->onDelete('cascade');
-            $table->foreignId('assigned_by')->constrained('users')->onDelete('cascade');
+            $table->foreignId('assigned_by')->nullable()->constrained('users')->onDelete('cascade');
+            $table->string('status')->default('active');
+            $table->timestamp('start_date')->nullable();
             $table->timestamps();
             
             $table->unique(['analyst_id', 'trader_id']);
