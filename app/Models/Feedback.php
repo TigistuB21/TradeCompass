@@ -18,6 +18,7 @@ class Feedback extends Model
         'trader_id',
         'analyst_id',
         'trade_id',
+        'type',
         'content',
         'ai_suggestions',
         'status',

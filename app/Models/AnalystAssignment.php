@@ -13,6 +13,9 @@ class AnalystAssignment extends Model
         'analyst_id',
         'trader_id',
         'assigned_by',
+        'status',
+        'start_date',
+        'current_focus_area',
     ];
 
     /**
