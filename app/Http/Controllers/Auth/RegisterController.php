@@ -56,15 +56,20 @@ class RegisterController extends Controller
             'verification_status' => $request->role === 'trader' ? 'verified' : 'pending',
             'is_active' => true, // Active but unverified
             // Common profile fields
-            'country' => $request->country,
-            'timezone' => $request->timezone,
+            'country' => $request->country ?: null,
+            'timezone' => $request->timezone ?: 'UTC',
             'profile_visibility' => 'public', // Default visibility
         ];
 
         // Auto-generate username if not provided
         if (empty($userData['username'])) {
-            $base = strtolower(str_replace(' ', '_', $request->name));
-            $userData['username'] = $base . '_' . substr(md5(uniqid()), 0, 4);
+            $cleanName = preg_replace('/[^a-z0-9_]/', '', strtolower(str_replace(' ', '_', $request->name)));
+            $base = substr($cleanName ?: 'trader', 0, 40);
+            $candidate = $base . '_' . substr(md5(uniqid()), 0, 4);
+            while (User::where('username', $candidate)->exists()) {
+                $candidate = $base . '_' . substr(md5(uniqid()), 0, 6);
+            }
+            $userData['username'] = $candidate;
         }
 
 
