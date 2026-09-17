@@ -1,53 +1,76 @@
-# Render Deployment Fix
-FROM php:8.3-apache
+# Stage 1: Build frontend assets
+FROM node:20-alpine AS frontend
+WORKDIR /app
+COPY package*.json ./
+RUN npm install
+COPY . .
+RUN npm run build
 
-# Install system dependencies
-RUN apt-get update && apt-get install -y \
-    git \
+# Stage 2: PHP-FPM & Nginx on Alpine
+FROM php:8.2-fpm-alpine
+
+# Install system dependencies and runtime libraries
+RUN apk add --no-cache \
+    nginx \
+    bash \
     curl \
+    git \
+    libpng \
+    libjpeg-turbo \
+    freetype \
+    libzip \
+    libpq \
+    oniguruma
+
+# Install build dependencies, configure and install PHP extensions
+RUN apk add --no-cache --virtual .build-deps \
+    $PHPIZE_DEPS \
     libpng-dev \
-    libonig-dev \
-    libxml2-dev \
-    libpq-dev \
+    libjpeg-turbo-dev \
+    freetype-dev \
     libzip-dev \
-    zip \
-    unzip \
-    sqlite3 \
-    libsqlite3-dev \
-    nodejs \
-    npm
+    postgresql-dev \
+    oniguruma-dev \
+    && docker-php-ext-configure gd --with-freetype --with-jpeg \
+    && docker-php-ext-install -j$(nproc) \
+        pdo_mysql \
+        pdo_pgsql \
+        mbstring \
+        exif \
+        pcntl \
+        bcmath \
+        gd \
+        zip \
+    && apk del .build-deps
 
-# Clear cache
-RUN apt-get clean && rm -rf /var/lib/apt/lists/*
-
-# Install PHP extensions
-RUN docker-php-ext-install pdo pdo_mysql pdo_pgsql pgsql mbstring exif pcntl bcmath gd
-RUN docker-php-ext-install zip
-
-# Get Composer
-COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
+# Install Composer
+COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
 # Set working directory
 WORKDIR /var/www/html
 
-# Copy application
-COPY . .
+# Copy application files
+COPY . /var/www/html
 
-# Install dependencies
-RUN composer install --optimize-autoloader --no-dev
-RUN npm install && npm run build
+# Copy compiled frontend assets from frontend stage
+COPY --from=frontend /app/public/build /var/www/html/public/build
 
-# Configure Apache
-RUN a2enmod rewrite
-RUN sed -i 's|/var/www/html|/var/www/html/public|g' /etc/apache2/sites-available/000-default.conf
+# Copy Nginx configuration and entrypoint script
+COPY docker/nginx.conf /etc/nginx/nginx.conf
+COPY docker/start.sh /usr/local/bin/start.sh
 
-# Set permissions
-RUN chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache
-RUN chmod -R 775 /var/www/html/storage /var/www/html/bootstrap/cache
+# Ensure script is executable and convert any Windows CRLF to LF
+RUN sed -i 's/\r$//' /usr/local/bin/start.sh && chmod +x /usr/local/bin/start.sh
 
-# Create database directory
-RUN mkdir -p /var/data && chown -R www-data:www-data /var/data
+# Run composer install optimized for production
+RUN composer install --no-dev --optimize-autoloader --no-interaction
 
-EXPOSE 80
+# Set correct permissions for storage and bootstrap/cache
+RUN chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache \
+    && chmod -R 775 /var/www/html/storage /var/www/html/bootstrap/cache
 
-CMD php artisan migrate --force --seed && apache2-foreground
+# Expose Render standard port and HTTP
+EXPOSE 80 10000
+
+# Start services via start.sh
+CMD ["/usr/local/bin/start.sh"]
