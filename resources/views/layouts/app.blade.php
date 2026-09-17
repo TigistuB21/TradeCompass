@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
 
-    <title>{{ config('app.name', 'pipJournal') }} - @yield('title', 'Dashboard')</title>
+    <title>{{ config('app.name', 'TradeCompass') }} - @yield('title', 'Dashboard')</title>
 
     <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.bunny.net">
@@ -21,10 +21,17 @@
         <aside class="hidden lg:flex lg:flex-col w-64 h-screen sticky top-0 bg-slate-900/50 backdrop-blur-xl border-r border-slate-800/50 flex-shrink-0">
             <!-- Logo -->
             <div class="p-6 border-b border-slate-800/50">
-                <h1 class="text-2xl font-bold text-white flex items-center gap-2">
-                    <span>📊</span>
-                    <span>pipJournal</span>
-                </h1>
+                <a href="{{ route('trader.dashboard') }}" class="flex items-center gap-3 group">
+                    <div class="w-9 h-9 rounded-lg bg-indigo-600 flex items-center justify-center shadow-md shadow-indigo-600/30 group-hover:bg-indigo-500 transition-colors">
+                        <svg class="w-5 h-5 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <circle cx="12" cy="12" r="10"></circle>
+                            <polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"></polygon>
+                        </svg>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <span class="text-lg font-bold tracking-tight text-white">TradeCompass</span>
+                    </div>
+                </a>
             </div>
 
             <!-- Navigation -->
@@ -70,10 +77,15 @@
             <!-- Mobile Header -->
             <header class="lg:hidden sticky top-0 z-10 bg-slate-900/95 backdrop-blur-xl border-b border-slate-800/50 flex-shrink-0">
                 <div class="flex items-center justify-between px-4 py-3">
-                    <h1 class="text-xl font-bold text-white flex items-center gap-2">
-                        <span>📊</span>
-                        <span>pipJournal</span>
-                    </h1>
+                    <a href="{{ route('trader.dashboard') }}" class="flex items-center gap-2.5">
+                        <div class="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center shadow-sm">
+                            <svg class="w-4 h-4 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <circle cx="12" cy="12" r="10"></circle>
+                                <polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"></polygon>
+                            </svg>
+                        </div>
+                        <span class="text-base font-bold tracking-tight text-white">TradeCompass</span>
+                    </a>
                     <div class="flex items-center gap-3">
                         <div class="w-8 h-8 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-full flex items-center justify-center text-white text-sm font-semibold">
                             {{ substr(auth()->user()->name, 0, 1) }}
