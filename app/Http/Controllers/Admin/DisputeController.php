@@ -72,7 +72,8 @@ class DisputeController extends Controller
             if ($dispute->subscription) {
                 $dispute->subscription->update(['status' => 'cancelled', 'cancelled_at' => now(), 'cancelled_by' => 'admin']);
             }
-            
+        }
+
         // Notify Trader (Email + DB)
         $trader = $dispute->trader;
         if ($trader) {

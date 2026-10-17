@@ -38,6 +38,7 @@ use App\Http\Controllers\Analyst\AnalystReviewController;
 // Phase 1: Subscription Controllers
 use App\Http\Controllers\SubscriptionController;
 use App\Http\Controllers\StripeWebhookController;
+use App\Http\Controllers\ChapaWebhookController;
 
 // Trader Controllers
 use App\Http\Controllers\Trader\TraderDashboardController;
