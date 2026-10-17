@@ -46,19 +46,18 @@ class RegisterController extends Controller
 
         $request->validate($validationRules);
 
-
         // Prepare user data with common fields
         $userData = [
             'name' => $request->name,
             'email' => $request->email,
             'password' => Hash::make($request->password),
-            'email_verified_at' => now(), // Auto-verify email
+            'email_verified_at' => null, // Requires standard email verification
             'verification_status' => $request->role === 'trader' ? 'verified' : 'pending',
-            'is_active' => true, // Active but unverified
+            'is_active' => true,
             // Common profile fields
             'country' => $request->country ?: null,
             'timezone' => $request->timezone ?: 'UTC',
-            'profile_visibility' => 'public', // Default visibility
+            'profile_visibility' => 'public',
         ];
 
         // Auto-generate username if not provided
@@ -72,35 +71,17 @@ class RegisterController extends Controller
             $userData['username'] = $candidate;
         }
 
-
-
         $user = User::create($userData);
 
         // Assign selected role
         $user->assignRole($request->role);
 
+        // Dispatch standard Laravel registered event (triggers verification email notification)
         event(new Registered($user));
 
         Auth::login($user);
 
-        // FIRST: Check if analyst needs to complete application
-        if ($user->hasRole('analyst') && !$user->application_id) {
-            return redirect()->route('analyst-application.create')
-                ->with('info', 'Account created! Please complete your analyst application to get verified.');
-        }
-
-        // SECOND: Check verification status - redirect pending users to verification page
-        if ($user->verification_status === 'pending') {
-            return redirect()
-                ->route('verification.pending')
-                ->with('info', 'Your account has been created and is pending admin approval.');
-        }
-
-        // THIRD: Redirect verified users to role-specific dashboard
-        if ($user->hasRole('analyst')) {
-            return redirect()->route('analyst.dashboard');
-        } else {
-            return redirect()->route('trader.dashboard');
-        }
+        // Redirect newly registered users directly to email verification notice
+        return redirect()->route('verification.notice');
     }
 }

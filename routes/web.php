@@ -290,7 +290,7 @@ Route::middleware('auth')->group(function () {
     // Email Verification
     Route::get('/email/verify', [EmailVerificationController::class, 'notice'])->name('verification.notice');
     Route::get('/email/verify/{id}/{hash}', [EmailVerificationController::class, 'verify'])
-        ->middleware('signed')
+        ->middleware(['signed', 'throttle:6,1'])
         ->name('verification.verify');
     Route::post('/email/verification-notification', [EmailVerificationController::class, 'resend'])
         ->middleware('throttle:6,1')
@@ -386,7 +386,7 @@ Route::middleware('auth')->group(function () {
     });
 
     // Analyst Routes (requires verification)
-    Route::middleware(['role:analyst', EnsureVerified::class])->prefix('analyst')->name('analyst.')->group(function () {
+    Route::middleware(['role:analyst', 'verified', EnsureVerified::class])->prefix('analyst')->name('analyst.')->group(function () {
         Route::get('/dashboard', [AnalystDashboardController::class, 'index'])->name('dashboard');
         Route::get('/traders/{trader}', [AnalystDashboardController::class, 'traderProfile'])->name('trader.profile');
         Route::post('/traders/{trader}/simulate', [AnalystDashboardController::class, 'simulate'])->name('trader.simulate');
@@ -412,7 +412,7 @@ Route::middleware('auth')->group(function () {
     });
 
     // Trader Routes (requires verification)
-    Route::middleware(['role:trader', EnsureVerified::class])->prefix('trader')->name('trader.')->group(function () {
+    Route::middleware(['role:trader', 'verified', EnsureVerified::class])->prefix('trader')->name('trader.')->group(function () {
         Route::get('/dashboard', [TraderDashboardController::class, 'index'])->name('dashboard');
         
         // Trade Management
