@@ -99,13 +99,16 @@ class TradeAnalyticsService
     {
         $query = $this->applyFilters($user->trades(), $filters);
         
-        $trades = $query->whereNotNull('exit_date')->get();
+        $trades = $query->whereNotNull('entry_date')->whereNotNull('exit_date')->get();
         
         if ($trades->isEmpty()) {
             return 0;
         }
 
         $totalHours = $trades->sum(function ($trade) {
+            if (!$trade->entry_date || !$trade->exit_date) {
+                return 0;
+            }
             return $trade->entry_date->diffInHours($trade->exit_date);
         });
 
@@ -228,18 +231,20 @@ class TradeAnalyticsService
             $query->where('trade_account_id', $tradeAccountId);
         }
 
-        $data = $query->selectRaw("CAST(strftime('%m', entry_date) AS INTEGER) as month, SUM(profit_loss) as total")
-            ->groupBy('month')
-            ->orderBy('month')
-            ->get()
-            ->keyBy('month')
-            ->map(fn($item) => round($item->total, 2))
-            ->toArray();
+        $trades = $query->get(['entry_date', 'profit_loss']);
+        $monthlyTotals = array_fill(1, 12, 0.0);
 
-        // Fill in missing months with 0
+        foreach ($trades as $trade) {
+            if (!$trade->entry_date) {
+                continue;
+            }
+            $month = (int) $trade->entry_date->format('n');
+            $monthlyTotals[$month] += (float) ($trade->profit_loss ?? 0);
+        }
+
         $result = [];
         for ($i = 1; $i <= 12; $i++) {
-            $result[] = $data[$i] ?? 0;
+            $result[] = round($monthlyTotals[$i], 2);
         }
 
         return $result;
@@ -371,8 +376,8 @@ class TradeAnalyticsService
 
         $pairStats = $query->selectRaw('pair, COUNT(*) as trades, SUM(profit_loss) as profit')
             ->groupBy('pair')
-            ->having('trades', '>=', 2)
-            ->orderBy('profit', 'desc')
+            ->havingRaw('COUNT(*) >= 2')
+            ->orderByRaw('SUM(profit_loss) DESC')
             ->get();
 
         return [
@@ -456,17 +461,26 @@ class TradeAnalyticsService
      */
     public function getTimeOfDayPerformance(User $user): array
     {
-        return $user->trades()
-            ->selectRaw("CAST(strftime('%H', entry_date) AS INTEGER) as hour, COUNT(*) as trades, SUM(profit_loss) as profit")
-            ->groupBy('hour')
-            ->orderBy('hour')
-            ->get()
-            ->map(fn($item) => [
-                'hour' => $item->hour,
-                'trades' => (int) $item->trades,
-                'profit' => round((float) $item->profit, 2),
-            ])
-            ->toArray();
+        $trades = $user->trades()->whereNotNull('entry_date')->get(['entry_date', 'profit_loss']);
+        $hourly = [];
+        for ($h = 0; $h < 24; $h++) {
+            $hourly[$h] = ['hour' => $h, 'trades' => 0, 'profit' => 0.0];
+        }
+
+        foreach ($trades as $trade) {
+            if (!$trade->entry_date) continue;
+            $hour = (int) $trade->entry_date->format('G');
+            if (isset($hourly[$hour])) {
+                $hourly[$hour]['trades']++;
+                $hourly[$hour]['profit'] += (float) ($trade->profit_loss ?? 0);
+            }
+        }
+
+        foreach ($hourly as &$item) {
+            $item['profit'] = round($item['profit'], 2);
+        }
+
+        return array_values($hourly);
     }
 
     /**
@@ -475,29 +489,26 @@ class TradeAnalyticsService
     public function getDayOfWeekPerformance(User $user): array
     {
         $days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-        
-        $data = $user->trades()
-            ->selectRaw("CAST(strftime('%w', entry_date) AS INTEGER) as day, COUNT(*) as trades, SUM(profit_loss) as profit")
-            ->groupBy('day')
-            ->orderBy('day')
-            ->get()
-            ->keyBy('day')
-            ->map(fn($item) => [
-                'trades' => (int) $item->trades,
-                'profit' => round((float) $item->profit, 2),
-            ])
-            ->toArray();
-
-        $result = [];
+        $trades = $user->trades()->whereNotNull('entry_date')->get(['entry_date', 'profit_loss']);
+        $dayStats = [];
         for ($i = 0; $i < 7; $i++) {
-            $result[] = [
-                'day' => $days[$i],
-                'trades' => $data[$i]['trades'] ?? 0,
-                'profit' => $data[$i]['profit'] ?? 0,
-            ];
+            $dayStats[$i] = ['day' => $days[$i], 'trades' => 0, 'profit' => 0.0];
         }
 
-        return $result;
+        foreach ($trades as $trade) {
+            if (!$trade->entry_date) continue;
+            $dayIdx = (int) $trade->entry_date->format('w');
+            if (isset($dayStats[$dayIdx])) {
+                $dayStats[$dayIdx]['trades']++;
+                $dayStats[$dayIdx]['profit'] += (float) ($trade->profit_loss ?? 0);
+            }
+        }
+
+        foreach ($dayStats as &$item) {
+            $item['profit'] = round($item['profit'], 2);
+        }
+
+        return array_values($dayStats);
     }
 
     /**
