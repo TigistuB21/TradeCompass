@@ -16,16 +16,158 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Carbon\Carbon;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class TradeController extends Controller
 {
     use AuthorizesRequests;
+
     /**
-     * Display a listing of the resource.
+     * Display a listing of the resource with scoping, filtering, sorting, summary metrics, and CSV export.
      */
-    public function index()
+    public function index(Request $request)
     {
-        return view('trader.trades.index');
+        $query = Auth::user()->trades()->with(['tradeAccount', 'strategyModel']);
+
+        // Conditional filters
+        if ($request->filled('trade_account_id')) {
+            $query->where('trade_account_id', $request->trade_account_id);
+        }
+
+        if ($request->filled('pair')) {
+            $query->scopePair($request->pair);
+        }
+
+        if ($request->filled('direction')) {
+            $query->where('direction', $request->direction);
+        }
+
+        if ($request->filled('outcome')) {
+            $query->where('outcome', $request->outcome);
+        }
+
+        if ($request->filled('session')) {
+            $query->scopeSession($request->session);
+        }
+
+        if ($request->filled('strategy_id')) {
+            $query->where('strategy_id', $request->strategy_id);
+        }
+
+        if ($request->filled('date_from') || $request->filled('date_to')) {
+            $from = $request->filled('date_from') ? Carbon::parse($request->date_from)->startOfDay() : null;
+            $to = $request->filled('date_to') ? Carbon::parse($request->date_to)->endOfDay() : null;
+            $query->scopeDateRange($from, $to);
+        }
+
+        // Sorting
+        $allowedSorts = ['entry_date', 'profit_loss', 'pips', 'lot_size'];
+        $sortField = in_array($request->query('sort'), $allowedSorts, true) ? $request->query('sort') : 'entry_date';
+        $sortOrder = strtolower($request->query('order', 'desc')) === 'asc' ? 'asc' : 'desc';
+        $query->orderBy($sortField, $sortOrder);
+
+        // Filtered Metrics Strip Calculation on pre-paginated clone
+        $metricsQuery = clone $query;
+        $totalTrades = (clone $metricsQuery)->count();
+        $netProfitLoss = (float) ((clone $metricsQuery)->sum('profit_loss') ?? 0);
+        $netPips = (float) ((clone $metricsQuery)->sum('pips') ?? 0);
+
+        $winCount = (clone $metricsQuery)->where('outcome', 'win')->count();
+        $closedCount = (clone $metricsQuery)->whereIn('outcome', ['win', 'loss', 'breakeven'])->count();
+        $winRate = $closedCount > 0 ? round(($winCount / $closedCount) * 100, 1) : ($totalTrades > 0 ? round(($winCount / $totalTrades) * 100, 1) : 0.0);
+
+        $grossProfit = (float) ((clone $metricsQuery)->where('profit_loss', '>', 0)->sum('profit_loss') ?? 0);
+        $grossLoss = abs((float) ((clone $metricsQuery)->where('profit_loss', '<', 0)->sum('profit_loss') ?? 0));
+        $profitFactor = $grossLoss > 0 ? round($grossProfit / $grossLoss, 2) : ($grossProfit > 0 ? 999.0 : 0.0);
+
+        $summary = [
+            'total_trades' => $totalTrades,
+            'net_profit_loss' => $netProfitLoss,
+            'net_pips' => $netPips,
+            'win_rate' => $winRate,
+            'profit_factor' => $profitFactor,
+        ];
+
+        // CSV Streamed Export
+        if ($request->query('export') === 'csv') {
+            $filename = 'tradecompass-trades-' . date('Y-m-d') . '.csv';
+            $headers = [
+                'Content-Type' => 'text/csv',
+                'Content-Disposition' => "attachment; filename=\"{$filename}\"",
+            ];
+
+            return response()->streamDownload(function () use ($query) {
+                $handle = fopen('php://output', 'w');
+                fputcsv($handle, [
+                    'Date', 'Pair', 'Direction', 'Account', 'Session', 'Strategy',
+                    'Lot Size', 'Entry Price', 'Exit Price', 'Stop Loss', 'Take Profit',
+                    'Pips', 'P/L ($)', 'Outcome'
+                ]);
+
+                (clone $query)->chunk(250, function ($trades) use ($handle) {
+                    foreach ($trades as $trade) {
+                        fputcsv($handle, [
+                            $trade->entry_date ? $trade->entry_date->format('Y-m-d H:i:s') : '',
+                            $trade->pair,
+                            is_object($trade->direction) ? $trade->direction->value : $trade->direction,
+                            $trade->tradeAccount?->account_name ?? ($trade->account?->account_name ?? 'N/A'),
+                            is_object($trade->session) ? $trade->session->value : $trade->session,
+                            $trade->strategyModel?->name ?? ($trade->strategy ?? 'N/A'),
+                            $trade->lot_size,
+                            $trade->entry_price,
+                            $trade->exit_price,
+                            $trade->stop_loss,
+                            $trade->take_profit,
+                            $trade->pips,
+                            $trade->profit_loss,
+                            is_object($trade->outcome) ? $trade->outcome->value : $trade->outcome,
+                        ]);
+                    }
+                });
+
+                fclose($handle);
+            }, $filename, $headers);
+        }
+
+        // Pagination (default 25 per page, clamped 10-100)
+        $perPage = (int) $request->query('per_page', 25);
+        if ($perPage < 10 || $perPage > 100) {
+            $perPage = 25;
+        }
+        $trades = $query->paginate($perPage)->appends($request->query());
+
+        // Dropdown & Filter options
+        $userPairs = Auth::user()->trades()->whereNotNull('pair')->distinct()->pluck('pair')->toArray();
+        $pairs = array_values(array_unique(array_merge($this->getCommonPairs(), $userPairs)));
+        sort($pairs);
+
+        $accounts = Auth::user()->tradeAccounts()->orderBy('account_name')->get();
+        $strategies = Strategy::where('user_id', Auth::id())->orderBy('name')->get();
+        $directions = TradeDirection::cases();
+        $outcomes = TradeOutcome::cases();
+        $sessions = MarketSession::cases();
+        $emotions = TradeEmotion::cases();
+        $postEmotions = PostTradeEmotion::cases();
+        $focusArea = 'standard';
+        $filters = $request->only([
+            'trade_account_id', 'pair', 'direction', 'outcome', 'session',
+            'strategy_id', 'date_from', 'date_to', 'sort', 'order', 'per_page'
+        ]);
+
+        return view('trader.trades.index', compact(
+            'trades',
+            'summary',
+            'pairs',
+            'accounts',
+            'strategies',
+            'directions',
+            'outcomes',
+            'sessions',
+            'emotions',
+            'postEmotions',
+            'focusArea',
+            'filters'
+        ));
     }
 
     public function create()
@@ -98,8 +240,6 @@ class TradeController extends Controller
         $validated['risk_reward_ratio'] = $calc['rr'];
         $validated['outcome'] = $calc['outcome'];
 
-        $validated['outcome'] = $calc['outcome'];
-
         // Compliance Check (Phase 6)
         $compliance = app(RiskComplianceService::class)->checkCompliance(Auth::user(), $validated);
         
@@ -134,6 +274,9 @@ class TradeController extends Controller
     {
         // Ensure user owns the trade
         $this->authorize('view', $trade);
+
+        // Eager-load relations for technical scorecard, playbook strategy, and analyst/AI feedback
+        $trade->loadMissing(['tradeAccount', 'strategyModel', 'feedback.analyst']);
 
         return view('trader.trades.show', compact('trade'));
     }
@@ -272,8 +415,6 @@ class TradeController extends Controller
         $pips = $diff * $multiplier;
         
         // Approx Profit ($10 per pip per lot standard)
-        // For JPY pairs, calculation differs ($1000 per lot per 1 movement?)
-        // Standard: 1 lot = $10/pip.
         $pl = $pips * $lot * 10; 
         
         // Outcome

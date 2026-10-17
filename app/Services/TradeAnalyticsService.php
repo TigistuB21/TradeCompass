@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Trade;
 use App\Models\User;
+use Carbon\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
@@ -15,6 +16,14 @@ class TradeAnalyticsService
     public function getTotalTrades(User $user, ?array $filters = []): int
     {
         return $this->applyFilters($user->trades(), $filters)->count();
+    }
+
+    /**
+     * Get net profit / loss ($)
+     */
+    public function getNetProfitLoss(User $user, ?array $filters = []): float
+    {
+        return round((float) ($this->applyFilters($user->trades(), $filters)->sum('profit_loss') ?? 0), 2);
     }
 
     /**
@@ -104,7 +113,7 @@ class TradeAnalyticsService
     }
 
     /**
-     * Get maximum drawdown percentage
+     * Get maximum drawdown in dollars ($)
      */
     public function getMaxDrawdown(User $user, ?array $filters = []): float
     {
@@ -164,10 +173,44 @@ class TradeAnalyticsService
         $runningTotal = 0;
 
         foreach ($trades as $trade) {
-            $runningTotal += $trade->profit_loss;
+            $runningTotal += (float) ($trade->profit_loss ?? 0);
             $data[] = [
-                'date' => $trade->entry_date->format('Y-m-d'),
+                'date' => $trade->entry_date ? $trade->entry_date->format('Y-m-d') : now()->format('Y-m-d'),
                 'equity' => round($runningTotal, 2),
+                'pnl' => round((float) ($trade->profit_loss ?? 0), 2),
+                'pair' => $trade->pair,
+            ];
+        }
+
+        return $data;
+    }
+
+    /**
+     * Get drawdown curve data for underwater chart
+     * Values <= 0 indicating drop from running historical peak
+     */
+    public function getDrawdownCurveData(User $user, ?array $filters = []): array
+    {
+        $query = $this->applyFilters($user->trades(), $filters);
+        $trades = $query->orderBy('entry_date')->get();
+
+        $data = [];
+        $runningTotal = 0;
+        $peak = 0;
+
+        foreach ($trades as $trade) {
+            $runningTotal += (float) ($trade->profit_loss ?? 0);
+            if ($runningTotal > $peak) {
+                $peak = $runningTotal;
+            }
+            
+            $drawdown = $runningTotal - $peak; // Continuous drawdown <= 0
+            $drawdownPct = $peak > 0 ? round(($drawdown / $peak) * 100, 2) : 0.0;
+
+            $data[] = [
+                'date' => $trade->entry_date ? $trade->entry_date->format('Y-m-d') : now()->format('Y-m-d'),
+                'drawdown' => round($drawdown, 2),
+                'drawdown_pct' => $drawdownPct,
             ];
         }
 
@@ -203,6 +246,60 @@ class TradeAnalyticsService
     }
 
     /**
+     * Get daily calendar performance data for monthly heatmap
+     */
+    public function getDailyCalendarData(User $user, int $year, int $month, ?int $tradeAccountId = null): array
+    {
+        $startDate = Carbon::createFromDate($year, $month, 1)->startOfMonth();
+        $endDate = Carbon::createFromDate($year, $month, 1)->endOfMonth();
+
+        $query = $user->trades()
+            ->where('entry_date', '>=', $startDate)
+            ->where('entry_date', '<=', $endDate);
+
+        if ($tradeAccountId) {
+            $query->where('trade_account_id', $tradeAccountId);
+        }
+
+        $trades = $query->orderBy('entry_date')->get();
+
+        $daily = [];
+        foreach ($trades as $trade) {
+            $dateKey = $trade->entry_date ? $trade->entry_date->format('Y-m-d') : '';
+            if (!$dateKey) continue;
+
+            if (!isset($daily[$dateKey])) {
+                $daily[$dateKey] = [
+                    'date' => $dateKey,
+                    'net_pnl' => 0.0,
+                    'trade_count' => 0,
+                    'win_count' => 0,
+                    'loss_count' => 0,
+                    'pips' => 0.0,
+                ];
+            }
+
+            $daily[$dateKey]['net_pnl'] += (float) ($trade->profit_loss ?? 0);
+            $daily[$dateKey]['trade_count']++;
+            $daily[$dateKey]['pips'] += (float) ($trade->pips ?? 0);
+
+            $outVal = strtolower(is_object($trade->outcome) ? $trade->outcome->value : (string) $trade->outcome);
+            if ($outVal === 'win') {
+                $daily[$dateKey]['win_count']++;
+            } elseif ($outVal === 'loss') {
+                $daily[$dateKey]['loss_count']++;
+            }
+        }
+
+        foreach ($daily as &$day) {
+            $day['net_pnl'] = round($day['net_pnl'], 2);
+            $day['pips'] = round($day['pips'], 1);
+        }
+
+        return $daily;
+    }
+
+    /**
      * Get session performance data
      */
     public function getSessionPerformance(User $user, ?array $filters = []): array
@@ -214,10 +311,10 @@ class TradeAnalyticsService
             ->get()
             ->map(function ($item) {
                 return [
-                    'session' => $item->session->label(), // Use enum's label() method
-                    'trades' => $item->trades,
-                    'profit' => round($item->profit, 2),
-                    'avg_profit' => round($item->avg_profit, 2),
+                    'session' => is_object($item->session) ? $item->session->label() : ucfirst($item->session ?? 'Other'),
+                    'trades' => (int) $item->trades,
+                    'profit' => round((float) $item->profit, 2),
+                    'avg_profit' => round((float) $item->avg_profit, 2),
                 ];
             })
             ->toArray();
@@ -230,41 +327,33 @@ class TradeAnalyticsService
     {
         $query = $this->applyFilters($user->trades(), $filters);
         
-        // Join with strategies table to get strategy names
-        // Note: strategy_id column name in trades table, id in strategies table
         return $query->whereNotNull('strategy_id')
             ->join('strategies', 'trades.strategy_id', '=', 'strategies.id')
             ->selectRaw('strategies.name as strategy_name, strategies.id as strategy_id, COUNT(*) as trades, SUM(profit_loss) as profit, AVG(profit_loss) as avg_profit')
             ->groupBy('strategies.id', 'strategies.name')
             ->get()
             ->map(function ($item) use ($user, $filters) {
-                 // Calculate WR per strategy
-                // Since raw query is complex for joined WR, we might do separate simple queries or subqueries
-                // For simplicity/performance balance, let's fetch basic stats here
-                // Note: Win Rate calculation per group in SQL is doable but tricky with SQLite/MySQL diffs.
-                // Let's do a quick separate count for wins for each strategy found in the loop
-                 
-                 $total = $item->trades;
-                 $wins = $user->trades()
+                $total = $item->trades;
+                $wins = $user->trades()
                     ->where('strategy_id', $item->strategy_id)
                     ->where('outcome', 'win')
                     ->when(isset($filters['date_from']), fn($q) => $q->where('entry_date', '>=', $filters['date_from']))
                     ->when(isset($filters['date_to']), fn($q) => $q->where('entry_date', '<=', $filters['date_to']))
-                     ->when(isset($filters['trade_account_id']), fn($q) => $q->where('trade_account_id', $filters['trade_account_id']))
+                    ->when(isset($filters['trade_account_id']), fn($q) => $q->where('trade_account_id', $filters['trade_account_id']))
                     ->count();
 
-                 $winRate = $total > 0 ? round(($wins / $total) * 100, 1) : 0;
+                $winRate = $total > 0 ? round(($wins / $total) * 100, 1) : 0;
 
                 return [
                     'id' => $item->strategy_id,
                     'name' => $item->strategy_name,
-                    'trades' => $item->trades,
-                    'profit' => round($item->profit, 2),
+                    'trades' => (int) $item->trades,
+                    'profit' => round((float) $item->profit, 2),
                     'win_rate' => $winRate,
-                    'avg_profit' => round($item->avg_profit, 2),
+                    'avg_profit' => round((float) $item->avg_profit, 2),
                 ];
             })
-            ->sortByDesc('profit') // specific sorting
+            ->sortByDesc('profit')
             ->values()
             ->toArray();
     }
@@ -282,21 +371,21 @@ class TradeAnalyticsService
 
         $pairStats = $query->selectRaw('pair, COUNT(*) as trades, SUM(profit_loss) as profit')
             ->groupBy('pair')
-            ->having('trades', '>=', 3) // At least 3 trades
+            ->having('trades', '>=', 2)
             ->orderBy('profit', 'desc')
             ->get();
 
         return [
-            'best' => $pairStats->take($limit)->map(fn($item) => [
+            'best' => $pairStats->where('profit', '>', 0)->take($limit)->map(fn($item) => [
                 'pair' => $item->pair,
-                'trades' => $item->trades,
-                'profit' => round($item->profit, 2),
-            ])->toArray(),
-            'worst' => $pairStats->sortBy('profit')->take($limit)->map(fn($item) => [
+                'trades' => (int) $item->trades,
+                'profit' => round((float) $item->profit, 2),
+            ])->values()->toArray(),
+            'worst' => $pairStats->where('profit', '<', 0)->sortBy('profit')->take($limit)->map(fn($item) => [
                 'pair' => $item->pair,
-                'trades' => $item->trades,
-                'profit' => round($item->profit, 2),
-            ])->toArray(),
+                'trades' => (int) $item->trades,
+                'profit' => round((float) $item->profit, 2),
+            ])->values()->toArray(),
         ];
     }
 
@@ -310,7 +399,10 @@ class TradeAnalyticsService
         return $query->selectRaw('outcome, COUNT(*) as count')
             ->groupBy('outcome')
             ->get()
-            ->mapWithKeys(fn($item) => [$item->outcome->label() => $item->count]) // Use enum's label() method
+            ->mapWithKeys(function ($item) {
+                $label = is_object($item->outcome) ? $item->outcome->label() : ucfirst($item->outcome ?? 'Other');
+                return [$label => (int) $item->count];
+            })
             ->toArray();
     }
 
@@ -327,7 +419,7 @@ class TradeAnalyticsService
         $maxLossStreak = 0;
 
         foreach ($trades as $trade) {
-            $outcomeValue = $trade->outcome->value; // Get enum value (string)
+            $outcomeValue = is_object($trade->outcome) ? $trade->outcome->value : $trade->outcome;
             
             if ($outcomeValue === $currentType) {
                 $currentStreak++;
@@ -344,7 +436,6 @@ class TradeAnalyticsService
             }
         }
 
-        // Check last streak
         if ($currentType === 'win' && $currentStreak > $maxWinStreak) {
             $maxWinStreak = $currentStreak;
         }
@@ -356,7 +447,7 @@ class TradeAnalyticsService
             'max_win_streak' => $maxWinStreak,
             'max_loss_streak' => $maxLossStreak,
             'current_streak' => $currentStreak,
-            'current_type' => $currentType, // Now returns string 'win' or 'loss'
+            'current_type' => $currentType,
         ];
     }
 
@@ -372,8 +463,8 @@ class TradeAnalyticsService
             ->get()
             ->map(fn($item) => [
                 'hour' => $item->hour,
-                'trades' => $item->trades,
-                'profit' => round($item->profit, 2),
+                'trades' => (int) $item->trades,
+                'profit' => round((float) $item->profit, 2),
             ])
             ->toArray();
     }
@@ -385,7 +476,6 @@ class TradeAnalyticsService
     {
         $days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
         
-        // SQLite's strftime('%w', date) returns 0-6 where 0 = Sunday
         $data = $user->trades()
             ->selectRaw("CAST(strftime('%w', entry_date) AS INTEGER) as day, COUNT(*) as trades, SUM(profit_loss) as profit")
             ->groupBy('day')
@@ -393,8 +483,8 @@ class TradeAnalyticsService
             ->get()
             ->keyBy('day')
             ->map(fn($item) => [
-                'trades' => $item->trades,
-                'profit' => round($item->profit, 2),
+                'trades' => (int) $item->trades,
+                'profit' => round((float) $item->profit, 2),
             ])
             ->toArray();
 
@@ -419,31 +509,31 @@ class TradeAnalyticsService
             return $query;
         }
 
-        if (isset($filters['date_from'])) {
-            $query->where('entry_date', '>=', $filters['date_from']);
+        if (isset($filters['date_from']) && !empty($filters['date_from'])) {
+            $query->where('entry_date', '>=', Carbon::parse($filters['date_from'])->startOfDay());
         }
 
-        if (isset($filters['date_to'])) {
-            $query->where('entry_date', '<=', $filters['date_to']);
+        if (isset($filters['date_to']) && !empty($filters['date_to'])) {
+            $query->where('entry_date', '<=', Carbon::parse($filters['date_to'])->endOfDay());
         }
 
-        if (isset($filters['pair'])) {
+        if (isset($filters['pair']) && !empty($filters['pair'])) {
             $query->where('pair', $filters['pair']);
         }
 
-        if (isset($filters['session'])) {
+        if (isset($filters['session']) && !empty($filters['session'])) {
             $query->where('session', $filters['session']);
         }
 
-        if (isset($filters['outcome'])) {
+        if (isset($filters['outcome']) && !empty($filters['outcome'])) {
             $query->where('outcome', $filters['outcome']);
         }
 
-        if (isset($filters['trade_account_id'])) {
+        if (isset($filters['trade_account_id']) && !empty($filters['trade_account_id'])) {
             $query->where('trade_account_id', $filters['trade_account_id']);
         }
 
-        if (isset($filters['strategy_id'])) {
+        if (isset($filters['strategy_id']) && !empty($filters['strategy_id'])) {
             $query->where('strategy_id', $filters['strategy_id']);
         }
 

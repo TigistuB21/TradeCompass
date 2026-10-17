@@ -8,6 +8,8 @@ use App\Enums\TradeOutcome;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Spatie\Activitylog\Traits\LogsActivity;
 use Spatie\Activitylog\LogOptions;
@@ -122,6 +124,30 @@ class Trade extends Model
     public function strategyModel(): BelongsTo
     {
         return $this->belongsTo(Strategy::class, 'strategy_id');
+    }
+
+    /**
+     * Alias for strategyModel() to match controller with(['strategy']) convention
+     */
+    public function strategy(): BelongsTo
+    {
+        return $this->strategyModel();
+    }
+
+    /**
+     * Get all feedback associated with this trade
+     */
+    public function feedback(): HasMany
+    {
+        return $this->hasMany(Feedback::class);
+    }
+
+    /**
+     * Get the latest feedback received on this trade
+     */
+    public function latestFeedback(): HasOne
+    {
+        return $this->hasOne(Feedback::class)->latestOfMany();
     }
 
     /**
