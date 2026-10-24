@@ -1,6 +1,8 @@
 @extends('layouts.auth')
 
 @section('title', 'Create Account')
+@section('meta_title', 'Create Trader Account | TradeCompass — Institutional Forex Journal')
+@section('meta_description', 'Sign up for TradeCompass to access institutional forex trade logging, real-time risk-to-reward analytics, and edge discovery.')
 
 @section('content')
     <!-- Header -->

@@ -1,2 +1,23 @@
+# TradeCompass Search Engine Crawler Directives
+# Platform: Institutional Forex Trading Journal & Analytics
+
 User-agent: *
-Disallow:
+Allow: /$
+Allow: /login
+Allow: /register
+Allow: /apply/analyst
+
+# Block private, authenticated, administrative, and internal routes
+Disallow: /trader/
+Disallow: /admin/
+Disallow: /analyst/
+Disallow: /email/
+Disallow: /api/
+Disallow: /storage/
+Disallow: /debug-
+Disallow: /forgot-password
+Disallow: /reset-password
+
+# Search Sitemap Reference
+# Note: If your Render URL or custom domain differs, update the domain below
+Sitemap: https://tradecompass.onrender.com/sitemap.xml

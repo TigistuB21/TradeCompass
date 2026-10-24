@@ -1,6 +1,7 @@
 @extends('layouts.auth')
 
 @section('title', 'Sign In')
+@section('meta_title', 'TradeCompass — Institutional Forex Trading Journal & Performance Analytics')
 
 @section('content')
     <!-- Header -->

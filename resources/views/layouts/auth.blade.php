@@ -5,7 +5,33 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
 
-    <title>{{ config('app.name', 'TradeCompass') }} - @yield('title', 'Forex Trading Journal')</title>
+    <!-- Primary SEO Metadata -->
+    <title>@yield('meta_title', 'TradeCompass — Institutional Forex Trading Journal & Performance Analytics')</title>
+    <meta name="description" content="@yield('meta_description', 'TradeCompass is an institutional forex trading journal and analytics platform. Track live R:R, calculate pip expectancy, and eliminate emotional trading bias.')">
+    <meta name="keywords" content="forex trading journal, trading performance analytics, risk reward calculator, pip tracker, institutional trade log, forex edge analysis">
+    <meta name="robots" content="index, follow">
+
+    <!-- Canonical URL -->
+    <link rel="canonical" href="@yield('canonical_url', url()->current())">
+
+    <!-- Open Graph / Facebook / LinkedIn / WhatsApp -->
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="TradeCompass">
+    <meta property="og:url" content="@yield('og_url', url()->current())">
+    <meta property="og:title" content="@yield('og_title', 'TradeCompass — Institutional Forex Trading Journal & Performance Analytics')">
+    <meta property="og:description" content="@yield('og_description', 'Institutional forex trading journal and performance analytics platform. Track live R:R, calculate pip expectancy, and eliminate emotional trading bias.')">
+    <meta property="og:image" content="{{ asset('images/default-cover.jpg') }}">
+
+    <!-- Twitter / X Social Cards -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:url" content="@yield('twitter_url', url()->current())">
+    <meta name="twitter:title" content="@yield('twitter_title', 'TradeCompass — Institutional Forex Trading Journal & Performance Analytics')">
+    <meta name="twitter:description" content="@yield('twitter_description', 'Institutional forex trading journal and performance analytics platform. Track live R:R, calculate pip expectancy, and eliminate emotional trading bias.')">
+    <meta name="twitter:image" content="{{ asset('images/default-cover.jpg') }}">
+
+    <!-- Google Search Console Verification -->
+    <!-- Paste your verification token from Google Search Console into the content attribute below or set GOOGLE_SITE_VERIFICATION in .env -->
+    <meta name="google-site-verification" content="{{ env('GOOGLE_SITE_VERIFICATION', 'YOUR_GOOGLE_VERIFICATION_CODE_HERE') }}">
 
     <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.bunny.net">
